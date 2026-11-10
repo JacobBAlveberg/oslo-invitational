@@ -71,6 +71,23 @@ td.pts{font-family:var(--display);font-weight:800;font-size:1.2rem;text-align:ri
 td.avg{font-family:var(--mono);text-align:right;color:var(--turf)}
 tr.top td.avg{background:var(--ball);color:var(--ball-ink)}
 tr.idle td{color:var(--muted)}
+.groups{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.fx{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.fx li{display:grid;grid-template-columns:4.2rem 1fr auto 1fr;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line);font-size:.92rem}
+.fx .meta{font-family:var(--mono);font-size:.75rem;color:var(--muted);line-height:1.3}
+.fx .side{min-width:0}
+.fx .side.b{text-align:right}
+.fx .side.win{font-weight:700}
+.fx .sc{display:flex;align-items:center;gap:4px;font-family:var(--display);font-weight:800}
+.fx .sc input{width:3rem;text-align:center;padding:4px;font-size:1.05rem}
+.fx li.done .meta{color:var(--turf)}
+.fx li.now{background:var(--ball);color:var(--ball-ink);border-radius:6px;padding-inline:8px}
+.fx li.now .meta{color:var(--ball-ink)}
+.fx li.bad input{border-color:var(--warn)}
+.fx .msg{grid-column:1/-1;color:var(--warn);font-size:.8rem}
+.fx li.free{color:var(--muted)}
+@media (max-width:480px){.fx li{grid-template-columns:1fr auto 1fr}.fx .meta{grid-column:1/-1}}
+
 .kg{font-size:.78rem;color:var(--muted);font-family:var(--mono)}
 table.golf input{width:3rem;padding:4px;text-align:center}
 table.golf td{padding:4px}
@@ -170,7 +187,7 @@ const FIREBASE_CONFIG = {
       <a class="ov" href="#benk"><span class="eyebrow">Før lørdag</span><b>Benk</b><span>Maks benk på video. Gir startrekkefølgen på 3000 m.</span></a>
       <a class="ov" href="#golf"><span class="eyebrow">10:00–12:00</span><b>Golfsim</b><span id="ov-golf">Samme 9 hull for alle. Færrest slag totalt vinner.</span></a>
       <a class="ov" href="#bordtennis"><span class="eyebrow">10:00–12:00</span><b>Bordtennis</b><span id="ov-bt">Alle mot alle i gruppa, ett sett til 11.</span></a>
-      <a class="ov" href="#padel"><span class="eyebrow">12:00–14:00</span><b>Padel</b><span id="ov-padel">5 kamper hver. 1 poeng per game, snitt per kamp avgjør.</span></a>
+      <a class="ov" href="#padel"><span class="eyebrow">12:00–14:00</span><b>Padel</b><span id="ov-padel">5 kamper hver. 1 poeng per seier, målforskjell ved likhet.</span></a>
       <a class="ov" href="#lop"><span class="eyebrow">15:30–16:30</span><b>3000 m</b><span id="ov-lop">Jaktstart rundt Mølla-runden. Først i mål vinner.</span></a>
     </div>
   </section>
@@ -216,7 +233,7 @@ const FIREBASE_CONFIG = {
       <div><b>Ved likt antall seire</b>ballforskjell, så innbyrdes oppgjør. Ellers delt plass</div>
     </div>
     <div class="card">
-      <div class="eyebrow">Tabell</div>
+      <div class="eyebrow">Samlet tabell · teller i sammenlagt</div>
       <div class="tablewrap">
         <table>
           <thead><tr><th>#</th><th>Spiller</th><th class="num">K</th><th class="num">S</th><th class="num">T</th><th class="num">Ballforskjell</th><th class="num">Poeng</th></tr></thead>
@@ -225,73 +242,42 @@ const FIREBASE_CONFIG = {
       </div>
       <p class="note" id="bt-status">Kobler til resultatene …</p>
     </div>
-    <form class="card" id="bt-form" novalidate>
-      <div class="eyebrow" id="bt-form-title">Legg inn kamp</div>
-      <div class="match-form">
-        <div class="team"><label for="bt-p1">Spiller 1</label><select id="bt-p1"></select></div>
-        <div class="score">
-          <label for="bt-s1">Baller</label>
-          <div class="pair"><input id="bt-s1" type="number" inputmode="numeric" min="0" max="40" aria-label="Baller spiller 1">–<input id="bt-s2" type="number" inputmode="numeric" min="0" max="40" aria-label="Baller spiller 2"></div>
-        </div>
-        <div class="team"><label for="bt-p2">Spiller 2</label><select id="bt-p2"></select></div>
-      </div>
-      <div class="err" id="bt-err" role="alert"></div>
-      <div class="actions">
-        <button class="primary" type="submit" id="bt-save">Lagre kamp</button>
-        <button type="button" id="bt-cancel" hidden>Avbryt redigering</button>
-      </div>
-    </form>
-    <div class="card">
-      <div class="eyebrow">Kamper spilt</div>
-      <ul class="matches" id="bt-matches"></ul>
+    <div class="groups">
+      <div class="card"><div class="eyebrow">Gruppe A · flight 3 og 4</div><div class="tablewrap">
+        <table>
+          <thead><tr><th>#</th><th>Spiller</th><th class="num">K</th><th class="num">S</th><th class="num">T</th><th class="num">Ballforskjell</th><th class="num">Poeng</th></tr></thead>
+          <tbody id="bt-table-a"></tbody>
+        </table>
+      </div><ol class="fx" id="bt-fx-a"></ol></div>
+      <div class="card"><div class="eyebrow">Gruppe B · flight 1 og 2</div><div class="tablewrap">
+        <table>
+          <thead><tr><th>#</th><th>Spiller</th><th class="num">K</th><th class="num">S</th><th class="num">T</th><th class="num">Ballforskjell</th><th class="num">Poeng</th></tr></thead>
+          <tbody id="bt-table-b"></tbody>
+        </table>
+      </div><ol class="fx" id="bt-fx-b"></ol></div>
     </div>
   </section>
 
   <section data-views="padel" aria-labelledby="padel-h" hidden>
     <h2 id="padel-h">Padel</h2>
     <div class="rule">
-      <div><b>12 min</b>Stillingen når tiden går ut er resultatet</div>
-      <div><b>1 game = 1 poeng</b>Hver spiller får poeng for game laget vant</div>
-      <div><b>Snitt per kamp</b>avgjør tabellen. Ved likhet: game-differanse</div>
+      <div><b>12 min</b>Kampen spilles til det er en vinner</div>
+      <div><b>1 seier = 1 poeng</b>til begge på vinnerlaget</div>
+      <div><b>Ved likt antall seire</b>avgjør personlig målforskjell. Ellers delt plass</div>
     </div>
-
     <div class="card">
       <div class="eyebrow">Tabell</div>
       <div class="tablewrap">
         <table>
-          <thead><tr><th>#</th><th>Spiller</th><th class="num">K</th><th class="num">Game</th><th class="num">Diff</th><th class="num">Poeng</th><th class="num">Snitt</th></tr></thead>
+          <thead><tr><th>#</th><th>Spiller</th><th class="num">K</th><th class="num">S</th><th class="num">T</th><th class="num">Målforskjell</th><th class="num">Poeng</th></tr></thead>
           <tbody id="padel-table"></tbody>
         </table>
       </div>
       <p class="note" id="padel-status">Kobler til resultatene …</p>
     </div>
-
-    <form class="card" id="padel-form" novalidate>
-      <div class="eyebrow" id="padel-form-title">Legg inn kamp</div>
-      <div class="match-form">
-        <div class="team">
-          <label for="p-a1">Lag 1</label>
-          <select id="p-a1"></select><select id="p-a2" aria-label="Lag 1, spiller 2"></select>
-        </div>
-        <div class="score">
-          <label for="p-g1">Game</label>
-          <div class="pair"><input id="p-g1" type="number" inputmode="numeric" min="0" max="30" aria-label="Game lag 1">–<input id="p-g2" type="number" inputmode="numeric" min="0" max="30" aria-label="Game lag 2"></div>
-        </div>
-        <div class="team">
-          <label for="p-b1">Lag 2</label>
-          <select id="p-b1"></select><select id="p-b2" aria-label="Lag 2, spiller 2"></select>
-        </div>
-      </div>
-      <div class="err" id="padel-err" role="alert"></div>
-      <div class="actions">
-        <button class="primary" type="submit" id="padel-save">Lagre kamp</button>
-        <button type="button" id="padel-cancel" hidden>Avbryt redigering</button>
-      </div>
-    </form>
-
     <div class="card">
-      <div class="eyebrow">Kamper spilt</div>
-      <ul class="matches" id="padel-matches"></ul>
+      <div class="eyebrow">Kamper · skriv inn game for hvert lag</div>
+      <ol class="fx" id="padel-fx"></ol>
     </div>
   </section>
 
@@ -589,198 +575,179 @@ setTimeout(oiTotals,0);
   });
 })();
 
-/* ---------- Bordtennis ---------- */
-(function(){
-  const $=id=>document.getElementById(id);
-  const p1=$('bt-p1'), p2=$('bt-p2'), s1=$('bt-s1'), s2=$('bt-s2'), form=$('bt-form'), err=$('bt-err'),
-    status=$('bt-status'), saveBtn=$('bt-save'), cancelBtn=$('bt-cancel'), title=$('bt-form-title'),
-    tableBody=$('bt-table'), listEl=$('bt-matches');
-  let matches=[], editing=null, coll=null, confirmId=null;
-  [p1,p2].forEach(s=>{ s.innerHTML='<option value="">Velg spiller</option>';
-    OI_PLAYERS.forEach(p=>{ const o=document.createElement('option'); o.value=p; o.textContent=p; s.appendChild(o); }); });
+/* ---------- Faste kamper (bordtennis og padel) ---------- */
+const OI_NAME={'Jonas F':'Jonas Fjelberg','Jonas L':'Jonas Leikvoll','Odin':'Odin Øfsthus Henriksen',
+  'William':'William Hartmann','Vegard':'Vegard Larsen','Eivind':'Eivind Midtbø Øyulvstad',
+  'Jacob':'Jacob Benjamin Alveberg','Ruben':'Ruben Essebo','Magnus':'Magnus Tørnquist',
+  'Peder':'Peder Leikvoll','Iver':'Iver Leikvoll','Eirik':'Eirik Amundsen'};
 
-  function standings(){
-    const s={}; OI_PLAYERS.forEach(p=>s[p]={p,k:0,w:0,l:0,bf:0,ba:0});
-    matches.forEach(m=>{ [[m.a,m.sa,m.sb],[m.b,m.sb,m.sa]].forEach(([p,f,a])=>{
-      if(!s[p]) s[p]={p,k:0,w:0,l:0,bf:0,ba:0};
-      s[p].k++; s[p].bf+=f; s[p].ba+=a; if(f>a) s[p].w++; else s[p].l++; }); });
-    const rows=Object.values(s).map(r=>({...r,d:r.bf-r.ba,h:0}));
-    // innbyrdes: seire mot de andre i samme gruppe (likt på seire og ballforskjell)
-    const groups={}; rows.filter(r=>r.k).forEach(r=>(groups[r.w+'|'+r.d]=groups[r.w+'|'+r.d]||[]).push(r));
-    Object.values(groups).filter(g=>g.length>1).forEach(g=>{
-      const names=new Set(g.map(r=>r.p));
-      matches.forEach(m=>{ if(names.has(m.a)&&names.has(m.b)){ const win=m.sa>m.sb?m.a:m.b; g.find(r=>r.p===win).h++; } });
-    });
+function oiEvent(cfg){
+  const res={}; let coll=null;
+  const status=document.getElementById(cfg.statusId);
+
+  function standings(players){
+    const s={}; players.forEach(p=>s[p]={p,k:0,w:0,l:0,f:0,a:0,h:0});
+    cfg.fixtures.forEach(fx=>{ const r=res[fx.id]; if(!r||fx.free) return;
+      [[fx.a,r.a,r.b],[fx.b,r.b,r.a]].forEach(([side,f,a])=>side.forEach(n=>{ const p=OI_NAME[n]; if(!s[p]) return;
+        s[p].k++; s[p].f+=f; s[p].a+=a; if(f>a) s[p].w++; else s[p].l++; })); });
+    const rows=Object.values(s).map(r=>({...r,d:r.f-r.a}));
+    if(cfg.h2h){
+      const g={}; rows.filter(r=>r.k).forEach(r=>(g[r.w+'|'+r.d]=g[r.w+'|'+r.d]||[]).push(r));
+      Object.values(g).filter(x=>x.length>1).forEach(grp=>{
+        const names=new Set(grp.map(r=>r.p));
+        cfg.fixtures.forEach(fx=>{ const r=res[fx.id]; if(!r||fx.a.length!==1) return;
+          const A=OI_NAME[fx.a[0]], B=OI_NAME[fx.b[0]];
+          if(names.has(A)&&names.has(B)) grp.find(x=>x.p===(r.a>r.b?A:B)).h++; });
+      });
+    }
     rows.forEach(r=>r.key=r.w+'|'+r.d+'|'+r.h);
     return rows.sort((a,b)=>(b.k>0)-(a.k>0)||b.w-a.w||b.d-a.d||b.h-a.h||a.p.localeCompare(b.p,'nb'));
   }
-  function render(){
-    const rows=standings();
+  function fillTable(el,rows){
     let place=0;
-    tableBody.innerHTML=rows.map((r,i)=>{ if(i===0||r.key!==rows[i-1].key) place=i+1;
-      return `<tr class="${r.k?(place===1?'top':''):'idle'}">
-      <td class="pos">${r.k?place:'–'}</td><td>${oiEsc(r.p)}</td><td class="num">${r.k}</td>
-      <td class="num">${r.w}</td><td class="num">${r.l}</td>
-      <td class="num">${r.k?(r.d>0?'+':'')+r.d:''}</td><td class="avg">${r.w}</td></tr>`; }).join('');
-    if(!matches.length){ listEl.innerHTML='<li class="soon">Ingen kamper lagt inn ennå. Første kamp legges inn i skjemaet over.</li>'; }
-    else { listEl.innerHTML=''; matches.forEach((m,i)=>{
-      const li=document.createElement('li');
-      li.innerHTML=`<div class="who"><b>Kamp ${matches.length-i}</b><br>${oiEsc(oiShort(m.a))} <span class="soon">mot</span> ${oiEsc(oiShort(m.b))}</div>
-        <div class="res">${m.sa}–${m.sb}</div>
-        <div class="btns"><button type="button" data-a="edit">Rediger</button>
-        <button type="button" class="${confirmId===m.id?'danger':''}" data-a="del">${confirmId===m.id?'Bekreft sletting':'Slett'}</button></div>`;
-      li.querySelector('[data-a=edit]').onclick=()=>{ editing=m.id; p1.value=m.a; p2.value=m.b; s1.value=m.sa; s2.value=m.sb;
-        title.textContent='Rediger kamp'; saveBtn.textContent='Oppdater kamp'; cancelBtn.hidden=false;
-        form.scrollIntoView({behavior:'smooth',block:'start'}); };
-      li.querySelector('[data-a=del]').onclick=async()=>{
-        if(confirmId!==m.id){ confirmId=m.id; render(); return; }
-        confirmId=null; try{ await coll.doc(m.id).delete(); if(editing===m.id) reset(); }catch(e){ status.textContent='Kunne ikke slette kampen. Prøv igjen.'; } };
-      listEl.appendChild(li); }); }
-    OI_RANKS.bt=rows.filter(r=>r.k).map(r=>({p:r.p,k:r.key})); oiTotals();
-    const top=rows[0], ov=$('ov-bt');
-    if(ov&&top&&top.k) ov.textContent=`Leder: ${top.p} med ${top.w} seire. ${matches.length} kamper spilt.`;
+    el.innerHTML=rows.map((r,i)=>{ if(i===0||r.key!==rows[i-1].key) place=i+1;
+      return `<tr class="${r.k?(place===1?'top':''):'idle'}"><td class="pos">${r.k?place:'–'}</td><td>${oiEsc(r.p)}</td>
+        <td class="num">${r.k}</td><td class="num">${r.w}</td><td class="num">${r.l}</td>
+        <td class="num">${r.k?(r.d>0?'+':'')+r.d:''}</td><td class="avg">${r.w}</td></tr>`; }).join('');
   }
-  function reset(){ editing=null; form.reset(); p1.value=''; p2.value='';
-    title.textContent='Legg inn kamp'; saveBtn.textContent='Lagre kamp'; cancelBtn.hidden=true; err.textContent=''; }
-  cancelBtn.onclick=reset;
-  form.addEventListener('submit',async e=>{
-    e.preventDefault(); err.textContent='';
-    if(!coll){ err.textContent='Resultatene kan ikke lagres fra denne visningen.'; return; }
-    if(!p1.value||!p2.value){ err.textContent='Velg begge spillerne.'; return; }
-    if(p1.value===p2.value){ err.textContent='Velg to forskjellige spillere.'; return; }
-    const a=parseInt(s1.value,10), b=parseInt(s2.value,10);
-    if(!(a>=0&&b>=0)){ err.textContent='Skriv inn baller for begge.'; return; }
-    if(a===b){ err.textContent='Et sett kan ikke ende uavgjort.'; return; }
-    if(Math.max(a,b)<11){ err.textContent='Vinneren må ha minst 11 baller.'; return; }
-    const prev=editing&&matches.find(m=>m.id===editing);
-    saveBtn.disabled=true;
-    try{ await (editing?coll.doc(editing):coll.doc()).set({a:p1.value,b:p2.value,sa:a,sb:b,at:prev?prev.at:Date.now()}); reset(); }
-    catch(e2){ err.textContent=oiWriteErr(e2); }
-    finally{ saveBtn.disabled=false; }
+
+  /* kamplister bygges én gang; verdier oppdateres etterpå */
+  const rowEls={};
+  cfg.lists.forEach(({el,filter})=>{
+    const ol=document.getElementById(el);
+    cfg.fixtures.filter(filter).forEach(fx=>{
+      const li=document.createElement('li');
+      if(fx.free){ li.className='free'; li.innerHTML=`<span class="meta">${oiEsc(fx.meta)}</span><span class="side">Ledig</span>`; ol.appendChild(li); return; }
+      li.innerHTML=`<span class="meta">${oiEsc(fx.meta)}</span>
+        <span class="side a">${oiEsc(fx.a.join(' + '))}</span>
+        <span class="sc"><input id="${cfg.prefix}${fx.id}-a" type="number" inputmode="numeric" min="0" max="40" aria-label="${oiEsc(fx.a.join(' og '))}, ${cfg.unit}">–<input id="${cfg.prefix}${fx.id}-b" type="number" inputmode="numeric" min="0" max="40" aria-label="${oiEsc(fx.b.join(' og '))}, ${cfg.unit}"></span>
+        <span class="side b">${oiEsc(fx.b.join(' + '))}</span><span class="msg" hidden></span>`;
+      ol.appendChild(li); rowEls[fx.id]=li;
+    });
   });
+
+  function nowId(){
+    if(!cfg.start) return null;
+    const d=new Date(); if(d.getFullYear()!==2026||d.getMonth()!==10||d.getDate()!==14) return null;
+    const m=d.getHours()*60+d.getMinutes();
+    return cfg.fixtures.filter(fx=>!fx.free&&fx.start!=null&&m>=fx.start&&m<fx.start+15).map(fx=>fx.id);
+  }
+  function render(){
+    const live=nowId()||[];
+    cfg.fixtures.forEach(fx=>{ const li=rowEls[fx.id]; if(!li) return; const r=res[fx.id];
+      const ia=document.getElementById(cfg.prefix+fx.id+'-a'), ib=document.getElementById(cfg.prefix+fx.id+'-b');
+      if(!li.contains(document.activeElement)){ ia.value=r?r.a:''; ib.value=r?r.b:''; li.classList.remove('bad'); li.querySelector('.msg').hidden=true; }
+      li.classList.toggle('done',!!r); li.classList.toggle('now',live.includes(fx.id)&&!r);
+      li.querySelector('.side.a').classList.toggle('win',!!r&&r.a>r.b);
+      li.querySelector('.side.b').classList.toggle('win',!!r&&r.b>r.a);
+    });
+    const all=standings(OI_PLAYERS);
+    fillTable(document.getElementById(cfg.tableId),all);
+    (cfg.groupTables||[]).forEach(g=>fillTable(document.getElementById(g.el),standings(g.players)));
+    OI_RANKS[cfg.rank]=all.filter(r=>r.k).map(r=>({p:r.p,k:r.key})); oiTotals();
+    const ov=document.getElementById(cfg.ovId), played=Object.keys(res).length;
+    if(ov&&played) ov.textContent=`Leder: ${all[0].p} med ${all[0].w} seire. ${played} av ${cfg.fixtures.filter(f=>!f.free).length} kamper spilt.`;
+  }
+  async function onChange(e){
+    const m=e.target.id.match(new RegExp('^'+cfg.prefix+'(.+)-[ab]$')); if(!m) return;
+    const id=m[1], li=rowEls[id], msg=li.querySelector('.msg');
+    const va=document.getElementById(cfg.prefix+id+'-a').value, vb=document.getElementById(cfg.prefix+id+'-b').value;
+    const fail=t=>{ li.classList.add('bad'); msg.textContent=t; msg.hidden=false; };
+    li.classList.remove('bad'); msg.hidden=true;
+    if(!coll){ fail('Resultatene kan ikke lagres akkurat nå.'); return; }
+    try{
+      if(va===''&&vb===''){ if(res[id]) await coll.doc(id).delete(); return; }
+      if(va===''||vb==='') return;
+      const a=parseInt(va,10), b=parseInt(vb,10);
+      if(!(a>=0&&b>=0)){ fail('Skriv inn hele tall.'); return; }
+      const bad=cfg.validate(a,b); if(bad){ fail(bad); return; }
+      await coll.doc(id).set({a,b});
+    }catch(err){ fail(oiWriteErr(err)); }
+  }
+  cfg.lists.forEach(({el})=>document.getElementById(el).addEventListener('change',onChange));
+  cfg.lists.forEach(({el})=>document.getElementById(el).addEventListener('focusout',()=>setTimeout(render,0)));
+  setInterval(render,60000);
   render();
   const timer=setTimeout(()=>{ status.textContent='Får ikke kontakt med resultatene ennå. Sjekk nettet.'; },10000);
   oiDb.then(db=>{
-    if(!db){ clearTimeout(timer); status.textContent='Resultatene er ikke tilgjengelige her. Sjekk nettet og last inn siden på nytt.'; saveBtn.disabled=true; return; }
-    coll=db.collection('bordtennis');
-    coll.orderBy('at','desc').onSnapshot(snap=>{
-      matches=snap.docs.map(d=>({id:d.id,...d.data()}));
-      if(!snap.metadata.fromCache){ clearTimeout(timer); status.textContent='Oppdateres live for alle. Tabellen sorteres på seire, så ballforskjell, så innbyrdes oppgjør.'; }
+    if(!db){ clearTimeout(timer); status.textContent='Resultatene er ikke tilgjengelige her. Sjekk nettet og last inn siden på nytt.'; return; }
+    coll=db.collection(cfg.coll);
+    coll.onSnapshot(snap=>{
+      Object.keys(res).forEach(k=>delete res[k]);
+      snap.docs.forEach(d=>{ const v=d.data(); if(cfg.fixtures.some(f=>f.id===d.id)&&typeof v.a==='number'&&typeof v.b==='number') res[d.id]={a:v.a,b:v.b}; });
+      if(!snap.metadata.fromCache){ clearTimeout(timer); status.textContent=cfg.okText; }
       render();
     },()=>{ clearTimeout(timer); status.textContent='Mistet kontakten med resultatene. Last inn siden på nytt.'; });
   });
+}
+
+/* ---------- Bordtennis ---------- */
+(function(){
+  const pairs=(g,list)=>list.trim().split('\n').map((l,i)=>{ const [a,b]=l.split('–').map(x=>x.trim());
+    return {id:g+(i+1),meta:'Kamp '+(i+1),a:[a],b:[b],g}; });
+  const A=pairs('a',`Jonas L–William
+Eivind–Jacob
+Odin–Ruben
+Jonas L–Jacob
+Eivind–Odin
+Ruben–William
+Odin–Jacob
+Jonas L–Ruben
+Eivind–William
+Jonas L–Odin
+Eivind–Ruben
+Jacob–William
+Jonas L–Eivind
+Odin–William
+Ruben–Jacob`);
+  const B=pairs('b',`Peder–Eirik
+Vegard–Magnus
+Jonas F–Iver
+Peder–Magnus
+Vegard–Jonas F
+Iver–Eirik
+Jonas F–Magnus
+Peder–Iver
+Vegard–Eirik
+Peder–Jonas F
+Vegard–Iver
+Magnus–Eirik
+Peder–Vegard
+Jonas F–Eirik
+Iver–Magnus`);
+  const full=l=>l.map(n=>OI_NAME[n]);
+  oiEvent({coll:'btkamper',prefix:'bt-',unit:'baller',rank:'bt',h2h:true,
+    fixtures:[...A,...B],statusId:'bt-status',tableId:'bt-table',ovId:'ov-bt',
+    lists:[{el:'bt-fx-a',filter:f=>f.g==='a'},{el:'bt-fx-b',filter:f=>f.g==='b'}],
+    groupTables:[{el:'bt-table-a',players:full(['Jonas L','William','Eivind','Jacob','Odin','Ruben'])},
+                 {el:'bt-table-b',players:full(['Peder','Eirik','Vegard','Magnus','Jonas F','Iver'])}],
+    validate:(a,b)=>a===b?'Et sett kan ikke ende likt.':(Math.max(a,b)<11?'Vinneren må ha minst 11 baller.':null),
+    okText:'Oppdateres live for alle. Skriv inn ballene på kampen, så lagres den.'});
 })();
 
 /* ---------- Padel ---------- */
 (function(){
-  const PLAYERS=['Odin Øfsthus Henriksen','Iver Leikvoll','Jonas Fjelberg','Ruben Essebo',
-    'Peder Leikvoll','Jonas Leikvoll','Eirik Amundsen','William Hartmann','Magnus Tørnquist',
-    'Jacob Benjamin Alveberg','Eivind Midtbø Øyulvstad','Vegard Larsen'];
-  const $=id=>document.getElementById(id);
-  const sel=['p-a1','p-a2','p-b1','p-b2'].map($);
-  const g1=$('p-g1'), g2=$('p-g2'), form=$('padel-form'), err=$('padel-err'),
-    status=$('padel-status'), saveBtn=$('padel-save'), cancelBtn=$('padel-cancel'),
-    title=$('padel-form-title'), tableBody=$('padel-table'), listEl=$('padel-matches');
-  let matches=[], editing=null, coll=null, confirmId=null;
-
-  sel.forEach(s=>{
-    s.innerHTML='<option value="">Velg spiller</option>'+PLAYERS.map(p=>`<option></option>`).join('');
-    [...s.options].slice(1).forEach((o,i)=>{ o.value=PLAYERS[i]; o.textContent=PLAYERS[i]; });
-  });
-  const short=n=>{ const p=n.split(' '); return p[0]+' '+p[p.length-1][0]+'.'; };
-  const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-
-  function standings(){
-    const s={}; PLAYERS.forEach(p=>s[p]={p,k:0,w:0,l:0});
-    matches.forEach(m=>{
-      const add=(team,gf,ga)=>team.forEach(p=>{ if(!s[p]) s[p]={p,k:0,w:0,l:0};
-        s[p].k++; s[p].w+=gf; s[p].l+=ga; });
-      add(m.t1||[],m.g1||0,m.g2||0); add(m.t2||[],m.g2||0,m.g1||0);
-    });
-    return Object.values(s).map(r=>({...r,d:r.w-r.l,avg:r.k?r.w/r.k:null}))
-      .sort((a,b)=>(b.avg??-1)-(a.avg??-1)||b.d-a.d||a.p.localeCompare(b.p,'nb'));
-  }
-  function renderTable(){
-    const rows=standings();
-    tableBody.innerHTML=rows.map((r,i)=>`<tr class="${r.k?(i===0?'top':''):'idle'}">
-      <td class="pos">${r.k?i+1:'–'}</td><td>${esc(r.p)}</td>
-      <td class="num">${r.k}</td><td class="num">${r.w}–${r.l}</td>
-      <td class="num">${r.k?(r.d>0?'+':'')+r.d:''}</td><td class="pts">${r.w}</td>
-      <td class="avg">${r.avg===null?'–':r.avg.toFixed(2).replace('.',',')}</td></tr>`).join('');
-  }
-  function renderList(){
-    if(!matches.length){ listEl.innerHTML='<li class="soon">Ingen kamper lagt inn ennå. Første kamp legges inn i skjemaet over.</li>'; return; }
-    listEl.innerHTML='';
-    matches.forEach((m,i)=>{
-      const li=document.createElement('li');
-      li.innerHTML=`<div class="who"><b>Kamp ${matches.length-i}</b><br>${esc((m.t1||[]).map(short).join(' & '))} <span class="soon">mot</span> ${esc((m.t2||[]).map(short).join(' & '))}</div>
-        <div class="res">${m.g1}–${m.g2}</div>
-        <div class="btns"><button type="button" data-a="edit">Rediger</button>
-        <button type="button" class="${confirmId===m.id?'danger':''}" data-a="del">${confirmId===m.id?'Bekreft sletting':'Slett'}</button></div>`;
-      li.querySelector('[data-a=edit]').onclick=()=>startEdit(m);
-      li.querySelector('[data-a=del]').onclick=()=>del(m);
-      listEl.appendChild(li);
-    });
-  }
-  function render(){
-    renderTable(); renderList();
-    OI_RANKS.padel=standings().filter(r=>r.k).map(r=>({p:r.p,k:r.avg+'|'+r.d})); oiTotals();
-    const top=standings()[0], ov=$('ov-padel');
-    if(ov&&top&&top.k) ov.textContent=`Leder: ${top.p} (${top.avg.toFixed(2).replace('.',',')} per kamp). ${matches.length} kamper spilt.`;
-  }
-
-  function resetForm(){
-    editing=null; form.reset(); sel.forEach(s=>s.value='');
-    title.textContent='Legg inn kamp'; saveBtn.textContent='Lagre kamp'; cancelBtn.hidden=true; err.textContent='';
-  }
-  function startEdit(m){
-    editing=m.id; [m.t1[0],m.t1[1],m.t2[0],m.t2[1]].forEach((p,i)=>sel[i].value=p||'');
-    g1.value=m.g1; g2.value=m.g2;
-    title.textContent='Rediger kamp'; saveBtn.textContent='Oppdater kamp'; cancelBtn.hidden=false;
-    form.scrollIntoView({behavior:'smooth',block:'start'});
-  }
-  cancelBtn.onclick=resetForm;
-
-  async function del(m){
-    if(confirmId!==m.id){ confirmId=m.id; renderList(); return; }
-    confirmId=null;
-    try{ await coll.doc(m.id).delete(); if(editing===m.id) resetForm(); }
-    catch(e){ status.textContent='Kunne ikke slette kampen. Prøv igjen.'; }
-  }
-
-  form.addEventListener('submit',async e=>{
-    e.preventDefault(); err.textContent='';
-    if(!coll){ err.textContent='Resultatene kan ikke lagres fra denne visningen.'; return; }
-    const ps=sel.map(s=>s.value);
-    if(ps.some(p=>!p)){ err.textContent='Velg to spillere på hvert lag.'; return; }
-    if(new Set(ps).size<4){ err.textContent='Samme spiller er valgt to ganger.'; return; }
-    const a=parseInt(g1.value,10), b=parseInt(g2.value,10);
-    if(!(a>=0&&b>=0&&a<=30&&b<=30)){ err.textContent='Skriv inn antall game for begge lag.'; return; }
-    const prev=editing&&matches.find(m=>m.id===editing);
-    const body={t1:[ps[0],ps[1]],t2:[ps[2],ps[3]],g1:a,g2:b,at:prev?prev.at:Date.now()};
-    saveBtn.disabled=true;
-    try{ await (editing?coll.doc(editing):coll.doc()).set(body); resetForm(); }
-    catch(e2){ err.textContent=e2&&e2.code==='permission-denied'
-      ? 'Databasen tar ikke imot endringer. Si fra til Jacob.'
-      : 'Kunne ikke lagre kampen. Prøv igjen.'; }
-    finally{ saveBtn.disabled=false; }
-  });
-
-  render();
-  const timer=setTimeout(()=>{ status.textContent='Får ikke kontakt med resultatene ennå. Sjekk nettet.'; },10000);
-  (async()=>{
-    const db=await oiDb;
-    if(!db){ clearTimeout(timer); status.textContent='Resultatene er ikke tilgjengelige her. Sjekk nettet og last inn siden på nytt.';
-      saveBtn.disabled=true; return; }
-    coll=db.collection('padel');
-    coll.orderBy('at','desc').onSnapshot(snap=>{
-      matches=snap.docs.map(d=>({id:d.id,...d.data()}));
-      if(!snap.metadata.fromCache){ clearTimeout(timer);
-        status.textContent='Oppdateres live for alle. Tabellen sorteres på snitt per kamp, deretter game-differanse.'; }
-      render();
-    },e=>{ clearTimeout(timer); status.textContent='Mistet kontakten med resultatene. Last inn siden på nytt.'; });
-  })();
+  const t=(h,m)=>h*60+m;
+  const raw=[
+    ['1','12:00','Jonas F + Odin','William + Vegard'],['1','12:15','Eivind + Jacob','Ruben + Jonas F'],
+    ['1','12:30','Jonas L + Vegard','Magnus + Odin'],['1','12:45','Odin + Eivind','Peder + Iver'],
+    ['1','13:00','William + Eivind','Jacob + Jonas L'],['1','13:15','Vegard + Ruben','Iver + William'],
+    ['1','13:30','Magnus + Eirik','Jonas F + Eivind'],['1','13:45','Iver + Ruben','Jonas L + Eirik'],
+    ['2','12:00','Jonas L + Iver','Jacob + Magnus'],['2','12:15','William + Peder','Eirik + Iver'],
+    ['2','12:30','Ruben + William','Eivind + Peder'],['2','12:45','Jacob + Eirik','Vegard + Magnus'],
+    ['2','13:00','Ruben + Peder','Magnus + Jonas F'],['2','13:15','Jonas L + Odin','Jonas F + Eirik'],
+    ['2','13:30','Peder + Odin','Vegard + Jacob'],['2','13:45',null,null]];
+  const fixtures=raw.map(([bane,tid,a,b])=>{ const [h,m]=tid.split(':').map(Number);
+    return {id:'b'+bane+'-'+tid.replace(':',''),start:t(h,m),meta:tid+' · bane '+bane,
+      free:!a,a:a?a.split(' + '):[],b:b?b.split(' + '):[]}; })
+    .sort((x,y)=>x.start-y.start||x.id.localeCompare(y.id));
+  oiEvent({coll:'padelkamper',prefix:'pd-',unit:'game',rank:'padel',h2h:false,start:true,
+    fixtures,statusId:'padel-status',tableId:'padel-table',ovId:'ov-padel',
+    lists:[{el:'padel-fx',filter:()=>true}],
+    validate:(a,b)=>a===b?'Kampen må ha en vinner. Stillingen kan ikke være lik.':null,
+    okText:'Oppdateres live for alle. Kampen som pågår nå er markert i gult.'});
 })();
+
 </script>
 
 </body>
