@@ -168,7 +168,7 @@ const FIREBASE_CONFIG = {
     <h2 id="ov-h">Øvelsene</h2>
     <div class="ov-grid">
       <a class="ov" href="#benk"><span class="eyebrow">Før lørdag</span><b>Benk</b><span>Maks benk på video. Gir startrekkefølgen på 3000 m.</span></a>
-      <a class="ov" href="#golf"><span class="eyebrow">10:00–12:00</span><b>Golfsim</b><span id="ov-golf">Slagspill over 9 hull. Færrest slag vinner.</span></a>
+      <a class="ov" href="#golf"><span class="eyebrow">10:00–12:00</span><b>Golfsim</b><span id="ov-golf">Samme 9 hull for alle. Færrest slag totalt vinner.</span></a>
       <a class="ov" href="#bordtennis"><span class="eyebrow">10:00–12:00</span><b>Bordtennis</b><span id="ov-bt">Alle mot alle i gruppa, ett sett til 11.</span></a>
       <a class="ov" href="#padel"><span class="eyebrow">12:00–14:00</span><b>Padel</b><span id="ov-padel">5 kamper hver. 1 poeng per game, snitt per kamp avgjør.</span></a>
       <a class="ov" href="#lop"><span class="eyebrow">15:30–16:30</span><b>3000 m</b><span id="ov-lop">Jaktstart rundt Mølla-runden. Først i mål vinner.</span></a>
@@ -192,15 +192,15 @@ const FIREBASE_CONFIG = {
   <section data-views="golf" aria-labelledby="golf-h" hidden>
     <h2 id="golf-h">Golfsim</h2>
     <div class="rule">
-      <div><b>Slagspill, 9 hull</b>Færrest slag totalt vinner</div>
-      <div><b>Fullfør alle hull</b>Bare spillere med 9 hull rangeres</div>
+      <div><b>Samme 9 hull</b>for alle spillerne</div>
+      <div><b>Totalt antall slag</b>Færrest slag vinner</div>
       <div><b>Likt antall slag</b>gir delt plass</div>
     </div>
     <div class="card">
-      <div class="eyebrow">Scorekort · skriv inn slag per hull</div>
+      <div class="eyebrow">Skriv inn totalt antall slag etter 9 hull</div>
       <div class="tablewrap">
         <table class="golf">
-          <thead><tr><th>#</th><th>Spiller</th><th class="num">1</th><th class="num">2</th><th class="num">3</th><th class="num">4</th><th class="num">5</th><th class="num">6</th><th class="num">7</th><th class="num">8</th><th class="num">9</th><th class="num">Totalt</th></tr></thead>
+          <thead><tr><th>#</th><th>Spiller</th><th class="num">Totalt antall slag</th></tr></thead>
           <tbody id="golf-table"></tbody>
         </table>
       </div>
@@ -213,13 +213,13 @@ const FIREBASE_CONFIG = {
     <div class="rule">
       <div><b>Alle mot alle</b>i gruppa på 6. Ett sett til 11</div>
       <div><b>1 seier = 1 poeng</b>Alle spiller 5 kamper</div>
-      <div><b>Ved likhet</b>avgjør ballforskjell</div>
+      <div><b>Ved likt antall seire</b>ballforskjell, så innbyrdes oppgjør. Ellers delt plass</div>
     </div>
     <div class="card">
       <div class="eyebrow">Tabell</div>
       <div class="tablewrap">
         <table>
-          <thead><tr><th>#</th><th>Spiller</th><th class="num">K</th><th class="num">S–T</th><th class="num">Baller</th><th class="num">Diff</th><th class="num">Poeng</th></tr></thead>
+          <thead><tr><th>#</th><th>Spiller</th><th class="num">K</th><th class="num">S</th><th class="num">T</th><th class="num">Ballforskjell</th><th class="num">Poeng</th></tr></thead>
           <tbody id="bt-table"></tbody>
         </table>
       </div>
@@ -550,37 +550,30 @@ setTimeout(oiTotals,0);
 
 /* ---------- Golf ---------- */
 (function(){
-  const HOLES=9, body=document.getElementById('golf-table'), status=document.getElementById('golf-status');
-  const cards={}; let coll=null;
-  body.innerHTML=OI_PLAYERS.map((p,i)=>`<tr data-i="${i}"><td class="pos">–</td><td class="name">${oiEsc(oiShort(p))}</td>${
-    Array.from({length:HOLES},(_,h)=>`<td><input id="g${i}-${h}" type="number" inputmode="numeric" min="1" max="15" aria-label="${oiEsc(p)}, hull ${h+1}"></td>`).join('')
-  }<td class="tot">–</td></tr>`).join('');
+  const body=document.getElementById('golf-table'), status=document.getElementById('golf-status');
+  const tot={}; let coll=null;
+  body.innerHTML=OI_PLAYERS.map((p,i)=>`<tr><td class="pos">–</td><td class="name">${oiEsc(p)}</td>
+    <td class="num"><input id="gt${i}" type="number" inputmode="numeric" min="9" max="200" aria-label="${oiEsc(p)}, totalt antall slag"></td></tr>`).join('');
   const rows=[...body.rows];
-
   function render(){
-    const res=OI_PLAYERS.map((p,i)=>{ const h=(cards['p'+i]&&cards['p'+i].h)||[];
-      const done=h.filter(x=>typeof x==='number'&&x>0); return {i,p,h,n:done.length,tot:done.reduce((a,b)=>a+b,0)}; });
-    const full=res.filter(r=>r.n===HOLES).sort((a,b)=>a.tot-b.tot);
-    res.forEach(r=>{
-      const tr=rows[r.i];
-      for(let h=0;h<HOLES;h++){ const inp=document.getElementById(`g${r.i}-${h}`);
-        if(document.activeElement!==inp) inp.value=typeof r.h[h]==='number'?r.h[h]:''; }
-      const pos=r.n===HOLES?full.findIndex(x=>x.tot===r.tot)+1:null;
-      tr.cells[0].textContent=pos||'–';
-      tr.cells[tr.cells.length-1].textContent=r.n?(r.n===HOLES?r.tot:`${r.tot} (${r.n}/${HOLES})`):'–';
-      tr.className=pos===1?'top':(r.n?'':'idle');
+    const done=OI_PLAYERS.map((p,i)=>({p,i,t:tot['p'+i]})).filter(r=>typeof r.t==='number').sort((a,b)=>a.t-b.t);
+    OI_PLAYERS.forEach((p,i)=>{
+      const inp=document.getElementById('gt'+i), t=tot['p'+i], has=typeof t==='number';
+      if(document.activeElement!==inp) inp.value=has?t:'';
+      const pos=has?done.findIndex(x=>x.t===t)+1:null;
+      rows[i].cells[0].textContent=pos||'–';
+      rows[i].className=pos===1?'top':(has?'':'idle');
     });
-    OI_RANKS.golf=full.map(r=>({p:r.p,k:r.tot})); oiTotals();
+    OI_RANKS.golf=done.map(r=>({p:r.p,k:r.t})); oiTotals();
     const ov=document.getElementById('ov-golf');
-    if(ov&&full.length) ov.textContent=`Leder: ${full[0].p} på ${full[0].tot} slag. ${full.length} av 12 ferdige.`;
+    if(ov) ov.textContent=done.length?`Leder: ${done[0].p} på ${done[0].t} slag. ${done.length} av 12 registrert.`:'Samme 9 hull for alle. Færrest slag totalt vinner.';
   }
   body.addEventListener('change',async e=>{
-    const m=e.target.id.match(/^g(\d+)-(\d+)$/); if(!m) return;
+    const m=e.target.id.match(/^gt(\d+)$/); if(!m) return;
     if(!coll){ status.textContent='Resultatene kan ikke lagres fra denne visningen.'; return; }
-    const i=+m[1], h=+m[2], key='p'+i;
-    const arr=Array.from({length:HOLES},(_,k)=>{ const v=((cards[key]&&cards[key].h)||[])[k]; return typeof v==='number'?v:null; });
-    const v=parseInt(e.target.value,10); arr[h]=v>0&&v<=15?v:null;
-    try{ await coll.doc(key).set({h:arr}); }catch(err){ status.textContent=oiWriteErr(err); }
+    const key='p'+m[1], v=parseInt(e.target.value,10);
+    try{ await (v>=9&&v<=200?coll.doc(key).set({tot:v}):coll.doc(key).delete()); }
+    catch(err){ status.textContent=oiWriteErr(err); }
   });
   render();
   const timer=setTimeout(()=>{ status.textContent='Får ikke kontakt med resultatene ennå. Sjekk nettet.'; },10000);
@@ -588,9 +581,9 @@ setTimeout(oiTotals,0);
     if(!db){ clearTimeout(timer); status.textContent='Resultatene er ikke tilgjengelige her. Sjekk nettet og last inn siden på nytt.'; return; }
     coll=db.collection('golf');
     coll.onSnapshot(snap=>{
-      Object.keys(cards).forEach(k=>delete cards[k]);
-      snap.docs.forEach(d=>cards[d.id]=d.data());
-      if(!snap.metadata.fromCache){ clearTimeout(timer); status.textContent='Oppdateres live for alle. Plassering vises når alle 9 hull er fylt inn.'; }
+      Object.keys(tot).forEach(k=>delete tot[k]);
+      snap.docs.forEach(d=>{ const v=d.data().tot; if(typeof v==='number') tot[d.id]=v; });
+      if(!snap.metadata.fromCache){ clearTimeout(timer); status.textContent='Oppdateres live for alle. Tøm feltet for å fjerne en score.'; }
       render();
     },()=>{ clearTimeout(timer); status.textContent='Mistet kontakten med resultatene. Last inn siden på nytt.'; });
   });
@@ -611,15 +604,24 @@ setTimeout(oiTotals,0);
     matches.forEach(m=>{ [[m.a,m.sa,m.sb],[m.b,m.sb,m.sa]].forEach(([p,f,a])=>{
       if(!s[p]) s[p]={p,k:0,w:0,l:0,bf:0,ba:0};
       s[p].k++; s[p].bf+=f; s[p].ba+=a; if(f>a) s[p].w++; else s[p].l++; }); });
-    return Object.values(s).map(r=>({...r,d:r.bf-r.ba}))
-      .sort((a,b)=>(b.k>0)-(a.k>0)||b.w-a.w||b.d-a.d||a.p.localeCompare(b.p,'nb'));
+    const rows=Object.values(s).map(r=>({...r,d:r.bf-r.ba,h:0}));
+    // innbyrdes: seire mot de andre i samme gruppe (likt på seire og ballforskjell)
+    const groups={}; rows.filter(r=>r.k).forEach(r=>(groups[r.w+'|'+r.d]=groups[r.w+'|'+r.d]||[]).push(r));
+    Object.values(groups).filter(g=>g.length>1).forEach(g=>{
+      const names=new Set(g.map(r=>r.p));
+      matches.forEach(m=>{ if(names.has(m.a)&&names.has(m.b)){ const win=m.sa>m.sb?m.a:m.b; g.find(r=>r.p===win).h++; } });
+    });
+    rows.forEach(r=>r.key=r.w+'|'+r.d+'|'+r.h);
+    return rows.sort((a,b)=>(b.k>0)-(a.k>0)||b.w-a.w||b.d-a.d||b.h-a.h||a.p.localeCompare(b.p,'nb'));
   }
   function render(){
     const rows=standings();
-    tableBody.innerHTML=rows.map((r,i)=>`<tr class="${r.k?(i===0?'top':''):'idle'}">
-      <td class="pos">${r.k?i+1:'–'}</td><td>${oiEsc(r.p)}</td><td class="num">${r.k}</td>
-      <td class="num">${r.w}–${r.l}</td><td class="num">${r.bf}–${r.ba}</td>
-      <td class="num">${r.k?(r.d>0?'+':'')+r.d:''}</td><td class="avg">${r.w}</td></tr>`).join('');
+    let place=0;
+    tableBody.innerHTML=rows.map((r,i)=>{ if(i===0||r.key!==rows[i-1].key) place=i+1;
+      return `<tr class="${r.k?(place===1?'top':''):'idle'}">
+      <td class="pos">${r.k?place:'–'}</td><td>${oiEsc(r.p)}</td><td class="num">${r.k}</td>
+      <td class="num">${r.w}</td><td class="num">${r.l}</td>
+      <td class="num">${r.k?(r.d>0?'+':'')+r.d:''}</td><td class="avg">${r.w}</td></tr>`; }).join('');
     if(!matches.length){ listEl.innerHTML='<li class="soon">Ingen kamper lagt inn ennå. Første kamp legges inn i skjemaet over.</li>'; }
     else { listEl.innerHTML=''; matches.forEach((m,i)=>{
       const li=document.createElement('li');
@@ -634,7 +636,7 @@ setTimeout(oiTotals,0);
         if(confirmId!==m.id){ confirmId=m.id; render(); return; }
         confirmId=null; try{ await coll.doc(m.id).delete(); if(editing===m.id) reset(); }catch(e){ status.textContent='Kunne ikke slette kampen. Prøv igjen.'; } };
       listEl.appendChild(li); }); }
-    OI_RANKS.bt=rows.filter(r=>r.k).map(r=>({p:r.p,k:r.w+'|'+r.d})); oiTotals();
+    OI_RANKS.bt=rows.filter(r=>r.k).map(r=>({p:r.p,k:r.key})); oiTotals();
     const top=rows[0], ov=$('ov-bt');
     if(ov&&top&&top.k) ov.textContent=`Leder: ${top.p} med ${top.w} seire. ${matches.length} kamper spilt.`;
   }
@@ -663,7 +665,7 @@ setTimeout(oiTotals,0);
     coll=db.collection('bordtennis');
     coll.orderBy('at','desc').onSnapshot(snap=>{
       matches=snap.docs.map(d=>({id:d.id,...d.data()}));
-      if(!snap.metadata.fromCache){ clearTimeout(timer); status.textContent='Oppdateres live for alle. Tabellen sorteres på seire, deretter ballforskjell.'; }
+      if(!snap.metadata.fromCache){ clearTimeout(timer); status.textContent='Oppdateres live for alle. Tabellen sorteres på seire, så ballforskjell, så innbyrdes oppgjør.'; }
       render();
     },()=>{ clearTimeout(timer); status.textContent='Mistet kontakten med resultatene. Last inn siden på nytt.'; });
   });
