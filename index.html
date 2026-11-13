@@ -375,7 +375,7 @@ const FIREBASE_CONFIG = {
 })();
 
 /* ---------- Felles ---------- */
-const OI_PLAYERS=['Odin Øfsthus Henriksen','Iver Leikvoll','Jonas Fjelberg','Ruben Essebo',
+const OI_PLAYERS=['Bendik Solli Andersen','Iver Leikvoll','Jonas Fjelberg','Ruben Essebo',
   'Peder Leikvoll','Jonas Leikvoll','Eirik Amundsen','William Hartmann','Magnus Tørnquist',
   'Jacob Benjamin Alveberg','Eivind Midtbø Øyulvstad','Vegard Larsen'];
 const oiDb=new Promise(res=>{
@@ -576,7 +576,7 @@ setTimeout(oiTotals,0);
 })();
 
 /* ---------- Faste kamper (bordtennis og padel) ---------- */
-const OI_NAME={'Jonas F':'Jonas Fjelberg','Jonas L':'Jonas Leikvoll','Odin':'Odin Øfsthus Henriksen',
+const OI_NAME={'Jonas F':'Jonas Fjelberg','Jonas L':'Jonas Leikvoll','Bendik':'Bendik Solli Andersen',
   'William':'William Hartmann','Vegard':'Vegard Larsen','Eivind':'Eivind Midtbø Øyulvstad',
   'Jacob':'Jacob Benjamin Alveberg','Ruben':'Ruben Essebo','Magnus':'Magnus Tørnquist',
   'Peder':'Peder Leikvoll','Iver':'Iver Leikvoll','Eirik':'Eirik Amundsen'};
@@ -687,18 +687,18 @@ function oiEvent(cfg){
     return {id:g+(i+1),meta:'Kamp '+(i+1),a:[a],b:[b],g}; });
   const A=pairs('a',`Jonas L–William
 Eivind–Jacob
-Odin–Ruben
+Bendik–Ruben
 Jonas L–Jacob
-Eivind–Odin
+Eivind–Bendik
 Ruben–William
-Odin–Jacob
+Bendik–Jacob
 Jonas L–Ruben
 Eivind–William
-Jonas L–Odin
+Jonas L–Bendik
 Eivind–Ruben
 Jacob–William
 Jonas L–Eivind
-Odin–William
+Bendik–William
 Ruben–Jacob`);
   const B=pairs('b',`Peder–Eirik
 Vegard–Magnus
@@ -719,7 +719,7 @@ Iver–Magnus`);
   oiEvent({coll:'btkamper',prefix:'bt-',unit:'baller',rank:'bt',h2h:true,
     fixtures:[...A,...B],statusId:'bt-status',tableId:'bt-table',ovId:'ov-bt',
     lists:[{el:'bt-fx-a',filter:f=>f.g==='a'},{el:'bt-fx-b',filter:f=>f.g==='b'}],
-    groupTables:[{el:'bt-table-a',players:full(['Jonas L','William','Eivind','Jacob','Odin','Ruben'])},
+    groupTables:[{el:'bt-table-a',players:full(['Jonas L','William','Eivind','Jacob','Bendik','Ruben'])},
                  {el:'bt-table-b',players:full(['Peder','Eirik','Vegard','Magnus','Jonas F','Iver'])}],
     validate:(a,b)=>a===b?'Et sett kan ikke ende likt.':(Math.max(a,b)<11?'Vinneren må ha minst 11 baller.':null),
     okText:'Oppdateres live for alle. Skriv inn ballene på kampen, så lagres den.'});
@@ -729,14 +729,14 @@ Iver–Magnus`);
 (function(){
   const t=(h,m)=>h*60+m;
   const raw=[
-    ['1','12:00','Jonas F + Odin','William + Vegard'],['1','12:15','Eivind + Jacob','Ruben + Jonas F'],
-    ['1','12:30','Jonas L + Vegard','Magnus + Odin'],['1','12:45','Odin + Eivind','Peder + Iver'],
+    ['1','12:00','Jonas F + Bendik','William + Vegard'],['1','12:15','Eivind + Jacob','Ruben + Jonas F'],
+    ['1','12:30','Jonas L + Vegard','Magnus + Bendik'],['1','12:45','Bendik + Eivind','Peder + Iver'],
     ['1','13:00','William + Eivind','Jacob + Jonas L'],['1','13:15','Vegard + Ruben','Iver + William'],
     ['1','13:30','Magnus + Eirik','Jonas F + Eivind'],['1','13:45','Iver + Ruben','Jonas L + Eirik'],
     ['2','12:00','Jonas L + Iver','Jacob + Magnus'],['2','12:15','William + Peder','Eirik + Iver'],
     ['2','12:30','Ruben + William','Eivind + Peder'],['2','12:45','Jacob + Eirik','Vegard + Magnus'],
-    ['2','13:00','Ruben + Peder','Magnus + Jonas F'],['2','13:15','Jonas L + Odin','Jonas F + Eirik'],
-    ['2','13:30','Peder + Odin','Vegard + Jacob'],['2','13:45',null,null]];
+    ['2','13:00','Ruben + Peder','Magnus + Jonas F'],['2','13:15','Jonas L + Bendik','Jonas F + Eirik'],
+    ['2','13:30','Peder + Bendik','Vegard + Jacob'],['2','13:45',null,null]];
   const fixtures=raw.map(([bane,tid,a,b])=>{ const [h,m]=tid.split(':').map(Number);
     return {id:'b'+bane+'-'+tid.replace(':',''),start:t(h,m),meta:tid+' · bane '+bane,
       free:!a,a:a?a.split(' + '):[],b:b?b.split(' + '):[]}; })
