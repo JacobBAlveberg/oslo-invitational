@@ -729,14 +729,22 @@ Iver–Magnus`);
 (function(){
   const t=(h,m)=>h*60+m;
   const raw=[
-    ['1','12:00','Jonas F + Bendik','William + Vegard'],['1','12:15','Eivind + Jacob','Ruben + Jonas F'],
-    ['1','12:30','Jonas L + Vegard','Magnus + Bendik'],['1','12:45','Bendik + Eivind','Peder + Iver'],
-    ['1','13:00','William + Eivind','Jacob + Jonas L'],['1','13:15','Vegard + Ruben','Iver + William'],
-    ['1','13:30','Magnus + Eirik','Jonas F + Eivind'],['1','13:45','Iver + Ruben','Jonas L + Eirik'],
-    ['2','12:00','Jonas L + Iver','Jacob + Magnus'],['2','12:15','William + Peder','Eirik + Iver'],
-    ['2','12:30','Ruben + William','Eivind + Peder'],['2','12:45','Jacob + Eirik','Vegard + Magnus'],
-    ['2','13:00','Ruben + Peder','Magnus + Jonas F'],['2','13:15','Jonas L + Bendik','Jonas F + Eirik'],
-    ['2','13:30','Peder + Bendik','Vegard + Jacob'],['2','13:45',null,null]];
+    ['1','12:00','Eivind + William','Iver + Jacob'],
+    ['2','12:00','Bendik + Eirik','Jonas L + Vegard'],
+    ['1','12:15','Iver + William','Magnus + Peder'],
+    ['2','12:15','Jonas F + Ruben','Bendik + Eivind'],
+    ['1','12:30','Jacob + Jonas F','Peder + Vegard'],
+    ['2','12:30','Jonas L + Ruben','Eirik + Magnus'],
+    ['1','12:45','Magnus + Vegard','Eirik + William'],
+    ['2','12:45','Iver + Jonas F','Peder + Ruben'],
+    ['1','13:00','Ruben + William','Bendik + Jonas L'],
+    ['2','13:00','Jacob + Magnus','Eivind + Vegard'],
+    ['1','13:15','Iver + Peder','Bendik + Jacob'],
+    ['2','13:15','Eivind + Jonas L','Eirik + Jonas F'],
+    ['1','13:30','Bendik + Peder','Jonas L + Magnus'],
+    ['2','13:30','Eirik + Ruben','Jonas F + Vegard'],
+    ['1','13:45','Jacob + William','Eivind + Iver'],
+    ['2','13:45',null,null]];
   const fixtures=raw.map(([bane,tid,a,b])=>{ const [h,m]=tid.split(':').map(Number);
     return {id:'b'+bane+'-'+tid.replace(':',''),start:t(h,m),meta:tid+' · bane '+bane,
       free:!a,a:a?a.split(' + '):[],b:b?b.split(' + '):[]}; })
