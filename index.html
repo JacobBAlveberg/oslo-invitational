@@ -71,6 +71,9 @@ td.pts{font-family:var(--display);font-weight:800;font-size:1.2rem;text-align:ri
 td.avg{font-family:var(--mono);text-align:right;color:var(--turf)}
 tr.top td.avg{background:var(--ball);color:var(--ball-ink)}
 tr.idle td{color:var(--muted)}
+.lock label{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.lockrow{display:flex;gap:8px;flex-wrap:wrap}
+.lockrow input{flex:1 1 200px;width:auto}
 .groups{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
 .fx{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
 .fx li{display:grid;grid-template-columns:4.2rem 1fr auto 1fr;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line);font-size:.92rem}
@@ -195,7 +198,16 @@ const FIREBASE_CONFIG = {
   <section data-views="oversikt" aria-labelledby="tot-h">
     <h2 id="tot-h">Sammenlagt</h2>
     <p>Hver øvelse gir plasseringspoeng: vinneren får 12, nummer to 11 og så videre ned til 1. Delt plass gir samme poeng. Benken teller bare som handicap på 3000 m.</p>
-    <div class="card">
+    <form class="card lock" id="tot-lock" novalidate>
+      <div class="eyebrow">Låst til premieutdelingen</div>
+      <label for="tot-pw">Passord</label>
+      <div class="lockrow">
+        <input id="tot-pw" type="password" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <button class="primary" type="submit">Vis</button>
+      </div>
+      <div class="err" id="tot-err" role="alert"></div>
+    </form>
+    <div class="card" id="tot-card" hidden>
       <div class="tablewrap">
         <table>
           <thead><tr><th>#</th><th>Spiller</th><th class="num">Golf</th><th class="num">BT</th><th class="num">Padel</th><th class="num">3000</th><th class="num">Totalt</th></tr></thead>
@@ -756,6 +768,22 @@ Iver–Magnus`);
     okText:'Oppdateres live for alle. Kampen som pågår nå er markert i gult.'});
 })();
 
+
+/* ---------- Passordlås for sammenlagt ---------- */
+(function(){
+  const HASH='016eafe9d0b8ff9986d529ac44d871601c29113dbd066193bc8b40fdae51d6a1';
+  const form=document.getElementById('tot-lock'), pw=document.getElementById('tot-pw'),
+    err=document.getElementById('tot-err'), card=document.getElementById('tot-card');
+  form.addEventListener('submit',async e=>{
+    e.preventDefault(); err.textContent='';
+    try{
+      const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(pw.value.trim()));
+      const hex=[...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+      if(hex===HASH){ form.hidden=true; card.hidden=false; pw.value=''; }
+      else { err.textContent='Feil passord'; pw.select(); }
+    }catch(_){ err.textContent='Kunne ikke sjekke passordet i denne nettleseren.'; }
+  });
+})();
 </script>
 
 </body>
